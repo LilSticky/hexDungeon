@@ -12,11 +12,11 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @Service
 public class FirebaseService {
@@ -52,14 +52,27 @@ public class FirebaseService {
         System.out.println("user created");
     }
 
-    // logs all users in blocks of 1000 and returns Collection of all user-id's
+//  now fancy with streams
+    /**
+     * returns all users in the database
+     * @return Collection<UUID> the users
+     * @throws InterruptedException
+     * @throws ExecutionException
+     */
     public Collection<UUID> getUsers() throws InterruptedException, ExecutionException  {
         ListUsersPage page = FirebaseAuth.getInstance().listUsersAsync(null).get();
-        Collection<UUID> users = Collections.emptyList();
-        for (ExportedUserRecord user : page.iterateAll()) {
-            users.add(UUID.fromString(user.getUid()));
-        }
-        return users;
+        Spliterator<ExportedUserRecord> userRecords = page.iterateAll().spliterator();
+        return StreamSupport.stream(userRecords, false)
+                .map(userRecord -> UUID.fromString(userRecord.getUid()))
+                .collect(Collectors.toList());
+    }
+
+//  Java Streams filter example
+    public UUID getFakeUser(UUID uid) throws ExecutionException, InterruptedException {
+        return getUsers().stream()
+                .filter(user -> user.equals(uid))
+                .findFirst()
+                .orElseThrow(RuntimeException::new);
     }
 
     public UserRecord getUserById(UUID uid) throws ExecutionException, InterruptedException {
