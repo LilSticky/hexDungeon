@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -23,7 +22,7 @@ public class FirebaseService {
     @PostConstruct
     public void initialize() {
         try {
-            FileInputStream serviceAccount = new FileInputStream("./serviceAccountKey.json");
+            FileInputStream serviceAccount = new FileInputStream("./service-account.json");
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .setDatabaseUrl("https://hex-smacks-default-rtdb.europe-west1.firebasedatabase.app")
@@ -59,34 +58,30 @@ public class FirebaseService {
      * @throws InterruptedException
      * @throws ExecutionException
      */
-    public Collection<UUID> getUsers() throws InterruptedException, ExecutionException  {
+    public Collection<String> getUsers() throws InterruptedException, ExecutionException  {
         ListUsersPage page = FirebaseAuth.getInstance().listUsersAsync(null).get();
         Spliterator<ExportedUserRecord> userRecords = page.iterateAll().spliterator();
         return StreamSupport.stream(userRecords, false)
-                .map(userRecord -> UUID.fromString(userRecord.getUid()))
+                .map(UserRecord::getUid)
                 .collect(Collectors.toList());
     }
 
 //  Java Streams filter example
-    public UUID getFakeUser(UUID uid) throws ExecutionException, InterruptedException {
+    public String getFakeUser(String uid) throws ExecutionException, InterruptedException {
         return getUsers().stream()
                 .filter(user -> user.equals(uid))
                 .findFirst()
                 .orElseThrow(RuntimeException::new);
     }
 
-    public UserRecord getUserById(UUID uid) throws ExecutionException, InterruptedException {
-        UserRecord userRecord = FirebaseAuth.getInstance().getUserAsync(String.valueOf(uid)).get();
+    public UserRecord getUserById(String uid) throws ExecutionException, InterruptedException {
+        UserRecord userRecord = FirebaseAuth.getInstance().getUserAsync(uid).get();
         System.out.println("got user " + userRecord.getUid());
         return userRecord;
     }
 
-    public void deleteUser(UUID uid) throws InterruptedException, ExecutionException {
-        FirebaseAuth.getInstance().deleteUserAsync(String.valueOf(uid)).get();
+    public void deleteUser(String uid) throws InterruptedException, ExecutionException {
+        FirebaseAuth.getInstance().deleteUserAsync(uid).get();
         System.out.println("Successfully deleted user.");
-    }
-
-    public void login(String name, String pwd) {
-        FirebaseAuth.getInstance();
     }
 }
